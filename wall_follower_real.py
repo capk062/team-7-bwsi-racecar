@@ -51,6 +51,9 @@ speed = 0.0
 angle = 0.0
 left_forward_distance = 0.0
 right_forward_distance = 0.0
+kD = 0.0
+kP = -0.01
+last_error = 0
 
 ########################################################################################
 # Functions
@@ -83,6 +86,7 @@ def update():
     global angle
     global left_forward_distance
     global right_forward_distance
+    global last_error
 
     rc.drive.set_max_speed(1)
 
@@ -94,14 +98,15 @@ def update():
 
     #present_value = 0
     #setpoint = 0
-    kp = 0.01
+    #kp = 0.01
 
     setpoint = (left_forward_distance + right_forward_distance)//2
     present_value = right_forward_distance
 
     error = setpoint-present_value
-    angle = kp * error
+    angle = kP * error + kD * (error - last_error)/rc.get_delta_time()
     angle = rc_utils.clamp(angle, -1, 1)
+    last_error = error
 
     if left_forward_distance==0:
         angle = -0.659
