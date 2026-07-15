@@ -54,7 +54,7 @@ import racecar_utils as rc_utils
 
 rc = racecar_core.create_racecar()
 
-kP = -0.0008125    #need to increase current kp
+kP = -0.001125   #need to increase current kp
 MAX_SPEED = 1  
 kD = 0#-0.000001425
 MIN_CONTOUR_AREA = 30
