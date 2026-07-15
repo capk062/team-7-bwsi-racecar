@@ -54,18 +54,18 @@ import racecar_utils as rc_utils
 
 rc = racecar_core.create_racecar()
 
-kP = -0.0006125    #-0.003125
-MAX_SPEED = 1
-kD = 0.0
+kP = -0.0008125    #need to increase current kp
+MAX_SPEED = 1  
+kD = 0#-0.000001425
 MIN_CONTOUR_AREA = 30
-
+                    
 # >> Constants
 # The smallest contour we will recognize as a valid contour
 
 
 # A crop window for the floor directly in front of the car
-CROP_FLOOR = ((200, 0), (rc.camera.get_height(), rc.camera.get_width()))
-BLUE = ((98, 90, 1), (103, 255, 255))  # The HSV range for the color blue USE THIS FOR TRACK
+CROP_FLOOR = ((300, 0), (rc.camera.get_height(), rc.camera.get_width()))
+BLUE = ((91, 13, 109), (111, 255, 255))  # The HSV range for the color blue USE THIS FOR TRACK
 
 # >> Variables
 speed = 0.0  # The current speed of the car
@@ -120,7 +120,7 @@ def update_contour():
            contour_area = 0
            
        # Display the image to the screen
-       rc.display.show_color_image(image)
+       #rc.display.show_color_image(image)
 
 
 
@@ -136,6 +136,7 @@ def start():
    # Initialize variables
    speed = 0
    angle = 0
+   last_error = 0
 
 
    # Set initial driving speed and angle
@@ -185,13 +186,13 @@ def update():
        present_value = contour_center[1]
        error = setpoint - present_value
        angle = kP * error + kD * (error - last_error)/rc.get_delta_time()
-       last_error = error
 
        angle = rc_utils.clamp(angle, -1, 1)
   
    # Use the triggers to control the car's speed
    #rt = rc.controller.get_trigger(rc.controller.Trigger.RIGHT)
    #lt = rc.controller.get_trigger(rc.controller.Trigger.LEFT)
+   last_error = error
    speed = 1
 
    #rc.telemetry.record(angle, contour_center)
@@ -200,7 +201,6 @@ def update():
 
 
    # Print the current speed and angle when the A button is held down
-   print("speed", speed, "angle", angle, "contour_center", contour_center, "contour_area", contour_area, "error", error)
 
 
 # [FUNCTION] update_slow() is similar to update() but is called once per second by
@@ -212,6 +212,7 @@ def update_slow():
    than update().  By default, update_slow() is run once per second
    """
    # Print a line of ascii text denoting the contour area and x-position
+   print("speed", speed, "angle", angle, "contour_center", contour_center, "contour_area", contour_area, "error", error)
    if rc.camera.get_color_image() is None:
        # If no image is found, print all X's and don't display an image
        print("X" * 10 + " (No image) " + "X" * 10)
