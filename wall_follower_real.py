@@ -52,7 +52,7 @@ angle = 0.0
 left_forward_distance = 0.0
 right_forward_distance = 0.0
 kD = 0.0
-kP = kP = -0.0025
+kP = kP = -0.003 #fine???? idk
 last_error = 0
 
 ########################################################################################
