@@ -56,8 +56,9 @@ angle = 0
 speed = 0
 time_delta = 0
 turning = False
+left_forward = -1
+right_forward = -1
 last_error = 0
-
 # Declare any global variables here
 
 
@@ -73,26 +74,29 @@ def clamp(value: float, min: float, max: float) -> float:
         return value
     
 def wall_following():
+    global last_error
     global speed
     global angle
-    global last_error
+    global left_forward
+    global right_forward
 
     scan = rc.lidar.get_samples()
-    left = scan[540]
-    right = scan[180]
-    forward = scan[0]
-    left_forward = scan[640]
-    right_forward = scan[80]
-    print(f"left: {left} | right: {right} | forward: {forward}")
-    print(f"left_forward: {left_forward} | right_forward: {right_forward}")
+    #left = scan[540]
+    #right = scan[180]
+    #forward = scan[0]
+    # left_forward = scan[640]
+    # right_forward = scan[80]
+    left_forward = rc_utils.get_lidar_average_distance(scan, 640, 10)
+    right_forward = rc_utils.get_lidar_average_distance(scan, 80, 10)
+    # print(f"left: {left} | right: {right} | forward: {forward}")
 
     error = left_forward - right_forward
-    error_x = left - right
+    # error_x = left - right
 
     # error = left - right
 
     speed = 1
-    kp = -0.013225
+    kp = -0.0008
     kd = 0
     # kp = -0.01324
     angle = error * kp + kd * (error - last_error)/rc.get_delta_time()
@@ -107,27 +111,26 @@ def wall_following():
     # if forward < 100:
     #     return
 
-    if left_forward <= 27:
-        angle = -0.99
-        speed = 0.8
-    elif right_forward <= 27:
-        angle = 0.99 # 0.99
-        speed = 0.8
-    elif left + right >= 100:
-        rc.drive.set_max_speed(0.52)
-        speed = 1
-        if abs(error) < 35:
-            angle = 0
-    elif left + right < 100:
-        rc.drive.set_max_speed(0.27)
-        speed = 0.86
+    # if left_forward <= 27:
+    #     angle = -0.99
+    #     speed = 0.8
+    # elif right_forward <= 27:
+    #     angle = 0.99 # 0.99
+    #     speed = 0.8
+    # elif left + right >= 100:
+    #     speed = 1
+    #     if abs(error) < 35:
+    #         angle = 0
+    # elif left + right < 100:
+    #     rc.drive.set_max_speed(0.27)
+    #     speed = 0.86
         # if abs(error) < 2:
         #     angle = 0
     
 
 # [FUNCTION] The start function is run once every time the start button is pressed
 def start():
-    rc.drive.set_max_speed(0.3)
+    rc.drive.set_max_speed(1)
 
 
 # [FUNCTION] After start() is run, this function is run once every frame (ideally at
@@ -139,7 +142,6 @@ def update():
     global time_delta
     
     wall_following()
-    print(f"angle: {angle}")
     rc.drive.set_speed_angle(speed, angle)
 
 
@@ -147,7 +149,12 @@ def update():
 # default. It is especially useful for printing debug messages, since printing a 
 # message every frame in update is computationally expensive and creates clutter
 def update_slow():
-    pass  # Remove 'pass and write your source code for the update_slow() function here
+    global left_forward
+    global right_forward
+    global angle
+    
+    print(f"left_forward: {left_forward} | right_forward: {right_forward}")
+    print(f"angle: {angle}")
 
 
 ########################################################################################

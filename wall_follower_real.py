@@ -52,7 +52,7 @@ angle = 0.0
 left_forward_distance = 0.0
 right_forward_distance = 0.0
 kD = 0.0
-kP = -0.01
+kP = kP = -0.0025
 last_error = 0
 
 ########################################################################################
@@ -93,8 +93,8 @@ def update():
 
     speed = 1
     scan = rc.lidar.get_samples()
-    right_forward_distance = rc_utils.get_lidar_average_distance(scan, 80, 20)
-    left_forward_distance = rc_utils.get_lidar_average_distance(scan, 640, 20)
+    right_forward_distance = rc_utils.get_lidar_average_distance(scan, 405, 20)
+    left_forward_distance = rc_utils.get_lidar_average_distance(scan, 675, 20)
 
     #present_value = 0
     #setpoint = 0
@@ -108,10 +108,12 @@ def update():
     angle = rc_utils.clamp(angle, -1, 1)
     last_error = error
 
+    """
     if left_forward_distance==0:
         angle = -0.659
     elif right_forward_distance==0:
         angle = 0.659
+    """
     
 
     #print("angle", angle, "setpoint", setpoint, "farthest distance", present_value, "forward distance", forward_distance)
