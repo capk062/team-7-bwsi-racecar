@@ -131,6 +131,7 @@ def update_contour():
 def start():
    global speed
    global angle
+   global last_error
 
 
    # Initialize variables
