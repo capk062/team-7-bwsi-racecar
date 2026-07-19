@@ -1,0 +1,5 @@
+---
+  MIN_CONTOUR_AREA: 30
+  MAX_SPEED: 0.6
+  kP: -0.001125 #maybe need to increase hopefully will work
+  kD: 0
