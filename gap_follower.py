@@ -36,10 +36,10 @@ running through the race in "race mode" to do the full course. Lowest time wins!
 ########################################################################################
 # Imports
 ########################################################################################
-#import sys
+import sys
 
 
-#sys.path.insert(1, '../../library')
+sys.path.insert(1, '../../library')
 import racecar_core
 import racecar_utils as rc_utils
 
@@ -68,7 +68,7 @@ def start():
 
 
    # Initialize variables
-   speed = 0
+   speed = 1
    angle = 0
 
 
@@ -88,7 +88,7 @@ def update():
     global angle
     global last_error
 
-    rc.drive.set_max_speed(.25)
+    rc.drive.set_max_speed(1)
 
 
     speed = 1
@@ -97,8 +97,9 @@ def update():
     max_angle=0
     num=rc.lidar.get_num_samples()
     quarter=num//4
+    front=num//2
     for offset in range(-quarter, quarter):
-        i = offset % num
+        i = (front+offset) % num
         if scan[i] > max:
             max = scan[i]
             max_angle=offset*(360.0/num)
@@ -116,13 +117,13 @@ def update():
     angle = rc_utils.clamp(angle, -1, 1)
     last_error = error
 
-    print ("angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0], "error", error, "present_value", present_value)
+    #print ("angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0], "error", error, "present_value", present_value)
     
 
     #print("angle", angle, "setpoint", setpoint, "farthest distance", present_value, "forward distance", forward_distance)
 
     rc.drive.set_speed_angle(speed, angle)
-    print("angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0])
+    print("speed", speed, "angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0])
         
 
 
