@@ -50,12 +50,12 @@ def gap_detection(scan):
     index_left = -1.0
     index_right = -1.0
 
-    for i in range(0, 200):# reality: range(0, 300) - total:1080 | sim: total-720 range(0, 200)
+    for i in range(0, 301):# reality: range(0, 301) - total:1080 | sim: total-720 range(0, 200)
         if scan[i] > 125:
             # filtered_scan[i] = 0
             index_right = i
 
-    for i in range(719, 519, -1):# reality: range(780, 1080) - total:1080 | sim: total-720 range(719, 519) * not including 519 and 720 doesn't exist
+    for i in range(1079, 779, -1):# reality: range(1079, 779, -1) - total:1080 | sim: total-720 range(719, 519, -1) * not including 519 and 720 doesn't exist
         # print(f"scan angle distances: {scan[i]}")
         if scan[i] > 125:
             # filtered_scan[i] = 0
