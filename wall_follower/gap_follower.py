@@ -57,6 +57,7 @@ forward_distance = 0.0
 kD = 0.00000
 kP = 0.005  #fine???? idk
 last_error = 0
+dots = None
 
 ########################################################################################
 # Functions
@@ -66,7 +67,7 @@ last_error = 0
 def start():
    global speed
    global angle
-
+   global dots
 
    # Initialize variables
    speed = 0
@@ -79,7 +80,7 @@ def start():
 
    # Set update_slow to refresh every half second
    rc.set_update_slow_time(0.5) # Remove 'pass' and write your source code for the start() function here
-
+   dots = rc.display.new_matrix()
 
 # [FUNCTION] After start() is run, this function is run once every frame (ideally at
 # 60 frames per second or slower depending on processing speed) until the back button
@@ -89,7 +90,7 @@ def update():
     global angle
     global last_error
 
-    rc.drive.set_max_speed(.25)
+    rc.drive.set_max_speed(.34)
 
 
     
@@ -124,38 +125,30 @@ def update():
     error=(setpoint-present_value)
     angle=kP*error
     angle=rc_utils.clamp(angle, -1, 1)
-    speed=0.34
-    #speed = kP*(1/error)
-    #speed=rc_utils.clamp(speed, 0.1, 1)
+    speed=1
     last_error=error
-   
-    #max=-1
-    #max_angle=0
-    #num=rc.lidar.get_num_samples()
-    #quarter=num//4
-    #offset=10
-    #min = max
-    #max_close_wall_distance=50
-    # for i in range(max+offset, max-offset):
-    #     if max<scan[i] and max != 0:
-    #         temp=scan[i]
-    #         if temp > max_close_wall_distance:
-    #             max=temp
-    #             max_angle=i
-    #forward_distance = rc_utils.get_lidar_average_distance(scan, 405, 20)
-    #left_forward_distance = rc_utils.get_lidar_average_distance(scan, 675, 20)
+    angle_correspond=[]
+    used_dots=dots[0,0:23], dots[0:7, 0], dots[0:7, 23]
+    for i in range(0,7):
+         angle_correspond.append((dots[i,0],-90+(i*180/(37)), -90+180/37+(i*180/(37)))) #for first column   
+    second_angle=angle_correspond[angle_correspond.__len__()-1][angle_correspond.__len__()-1][angle_correspond.__len__()-1]
+    for i in range(0,23):
+           angle_correspond.append((dots[0,i],second_angle+(i*180/(37)), second_angle+180/37+(i*180/(37)))) #for first row
+    third_angle=angle_correspond[angle_correspond.__len__()-1][angle_correspond.__len__()-1][angle_correspond.__len__()-1]
+    for i in range(0,7):
+           angle_correspond.append((dots[i,23], third_angle+(i*180/(37)), second_angle+180/37+(i*180/(37)))) #for last column
 
-    #present_value = 0
-    #setpoint = 0
-    #kp = 0.01
-
-    # setpoint = max_angle
-    # present_value = 0
-    # error = (setpoint - present_value)
-    # angle = kP * error + kD * (error - last_error)/rc.get_delta_time()
-    # angle = rc_utils.clamp(angle, -1, 1)
-    # last_error = error
-    # speed = 1 - 0.5*abs(angle)
+    min=float('inf')
+    diff=float('inf')
+    good_dot=None
+    for i in range(0, angle_correspond.__len__()):
+        diff=abs(angle_correspond[i][1]-setpoint)
+        if diff < min:
+            min=diff
+            good_dot=angle_correspond[i][0]
+    for i in range(0, good_dot.__len__()):
+        good_dot[i]=1
+        rc.display.set_matrix(dots)
 
     print ("speed", speed, "angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0], "error", error, "present_value", present_value)
 
