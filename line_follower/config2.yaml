@@ -1,0 +1,5 @@
+---
+  MIN_CONTOUR_AREA: 3000
+  MAX_SPEED: 1
+  kP: -0.002
+  kD: 0
