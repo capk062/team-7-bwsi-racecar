@@ -42,6 +42,7 @@ import sys
 sys.path.insert(1, '../../library')
 import racecar_core
 import racecar_utils as rc_utils
+import numpy as np
 
 ########################################################################################
 # Global variables
@@ -54,7 +55,7 @@ speed = 0.0
 angle = 0.0
 forward_distance = 0.0
 kD = 0.00000
-kP = 0.003  #fine???? idk
+kP = 0.005  #fine???? idk
 last_error = 0
 
 ########################################################################################
@@ -68,7 +69,7 @@ def start():
 
 
    # Initialize variables
-   speed = 1
+   speed = 0
    angle = 0
 
 
@@ -88,21 +89,59 @@ def update():
     global angle
     global last_error
 
-    rc.drive.set_max_speed(1)
+    rc.drive.set_max_speed(.25)
 
 
-    speed = 1
+    
     scan = rc.lidar.get_samples()
-    max=0
-    max_angle=0
-    num=rc.lidar.get_num_samples()
-    quarter=num//4
-    front=num//2
-    for offset in range(-quarter, quarter):
-        i = (front+offset) % num
-        if scan[i] > max:
-            max = scan[i]
-            max_angle=offset*(360.0/num)
+    present_value = 0
+    max=150
+    prev_max=0
+    far=[]
+    zero_indices=[]
+    num=scan.__len__()
+    low_scan_angle=int((-90/360)*num)
+    high_scan_angle=int((90/360)*num)
+    for i in range((low_scan_angle), (high_scan_angle)):
+        if scan[i] == 0:
+            far.append(scan[i])
+            zero_indices.append(i)
+            # if (scan[i-1]==0 and i>0) or (i<scan.__len__() and scan[i+1] == 0):
+            #     far.append(scan[i])
+            #     zero_indices.append(i)
+    if far.__len__() == 0:
+        for i in range(0, scan.__len__()):
+            if rc_utils.get_lidar_average_distance(scan, i, 5) > max:
+                max=rc_utils.get_lidar_average_distance(scan, i, 5)
+                max_angle=i
+                
+    if far.__len__() > 0:
+        setpoint=zero_indices[far.__len__()//2]
+        farthest_distance=setpoint
+    else:
+        setpoint=max_angle
+        farthest_distance=setpoint
+    error=(setpoint-present_value)
+    angle=kP*error
+    angle=rc_utils.clamp(angle, -1, 1)
+    speed=0.34
+    #speed = kP*(1/error)
+    #speed=rc_utils.clamp(speed, 0.1, 1)
+    last_error=error
+   
+    #max=-1
+    #max_angle=0
+    #num=rc.lidar.get_num_samples()
+    #quarter=num//4
+    #offset=10
+    #min = max
+    #max_close_wall_distance=50
+    # for i in range(max+offset, max-offset):
+    #     if max<scan[i] and max != 0:
+    #         temp=scan[i]
+    #         if temp > max_close_wall_distance:
+    #             max=temp
+    #             max_angle=i
     #forward_distance = rc_utils.get_lidar_average_distance(scan, 405, 20)
     #left_forward_distance = rc_utils.get_lidar_average_distance(scan, 675, 20)
 
@@ -110,20 +149,21 @@ def update():
     #setpoint = 0
     #kp = 0.01
 
-    setpoint = max_angle
-    present_value = 0
-    error = (setpoint - present_value)
-    angle = kP * error + kD * (error - last_error)/rc.get_delta_time()
-    angle = rc_utils.clamp(angle, -1, 1)
-    last_error = error
+    # setpoint = max_angle
+    # present_value = 0
+    # error = (setpoint - present_value)
+    # angle = kP * error + kD * (error - last_error)/rc.get_delta_time()
+    # angle = rc_utils.clamp(angle, -1, 1)
+    # last_error = error
+    # speed = 1 - 0.5*abs(angle)
 
-    #print ("angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0], "error", error, "present_value", present_value)
-    
+    print ("speed", speed, "angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0], "error", error, "present_value", present_value)
+
 
     #print("angle", angle, "setpoint", setpoint, "farthest distance", present_value, "forward distance", forward_distance)
 
     rc.drive.set_speed_angle(speed, angle)
-    print("speed", speed, "angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0])
+    #print("angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0])
         
 
 
