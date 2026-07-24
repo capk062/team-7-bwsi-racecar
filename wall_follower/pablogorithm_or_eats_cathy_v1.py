@@ -37,9 +37,9 @@ rc = racecar_core.create_racecar()
 
 speed = 0
 angle = 0
-right_max_dis = 0
+right_dis = 0.0
 right_max_distance_angle = 0
-left_max_dis = 0
+left_dis = 0.0
 left_max_distance_angle = 0
 
 
@@ -52,7 +52,7 @@ def right_max_dis(scan):
     max_dis_angle = -1
     samples = rc.lidar.get_num_samples()
 
-    for i in range(0, ):# 720 samples/4
+    for i in range(0, 180):# 720
         avg = rc_utils.get_lidar_average_distance(scan, i/2 , 20)
         if avg > max_avg:
             max_avg = avg
@@ -66,7 +66,7 @@ def left_max_dis(scan):
     max_dis_angle = -1
     samples = rc.lidar.get_num_samples()
 
-    for i in range(0, 1, -1):# (3*samples)/4
+    for i in range(719, 540, -1):# (3*samples)/4
         avg = rc_utils.get_lidar_average_distance(scan, i/2 , 20)
         if avg > max_avg:   
             max_avg = avg
@@ -87,18 +87,17 @@ def start():
 def update():
     global angle
     global speed
-    global right_max_dis
+    global right_dis
     global right_max_distance_angle
-    global left_max_dis
+    global left_dis
     global left_max_distance_angle
 
     scan = rc.lidar.get_samples()
-    
 
-    right_max_distance_angle, right_max_dis = right_max_dis(scan)
-    left_max_distance_angle, left_max_dis = left_max_dis(scan)
+    right_max_distance_angle, right_dis = right_max_dis(scan)
+    left_max_distance_angle, left_dis = left_max_dis(scan)
 
-    error = right_max_dis - left_max_dis # used to weigh the importance of a distance or angle based on distance(longer -> more importance)
+    error = right_dis - left_dis # used to weigh the importance of a distance or angle based on distance(longer -> more importance)
 
     kp = 0.002125
 
@@ -106,11 +105,15 @@ def update():
 
     angle = rc_utils.clamp(angle, -1, 1)
 
+    speed = 1
+
     # maybe include a speed controller when speed is higher
 
-    print(f"right distance: {right_max_dis} | left distance: {left_max_dis}")
+    print(f"right distance: {right_dis} | left distance: {left_dis}")
     print(f"right max distance angle: {right_max_distance_angle} | left max distance angle: {left_max_distance_angle}")
-    print(f"error: {error} | angle: {angle}")
+    print(f"error: {error} | angle: {angle} | speed: {speed}")
+
+    rc.drive.set_speed_angle(speed, angle)
 
 # [FUNCTION] update_slow() is similar to update() but is called once per second by
 # default. It is especially useful for printing debug messages, since printing a 
