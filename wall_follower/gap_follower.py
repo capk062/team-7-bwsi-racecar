@@ -55,10 +55,11 @@ speed = 0.0
 angle = 0.0
 forward_distance = 0.0
 kD = 0.000
-kP = 0.007 #fine???? idk
+kP = 0.01 #fine???? idk
 last_error = 0
 dots = None
-forward_distance_threshold=175
+forward_distance_threshold=70
+max_gap=0
 
 ########################################################################################
 # Functions
@@ -69,10 +70,17 @@ def start():
    global speed
    global angle
    global dots
+   #global border_path
+   global high_scan_angle
+   global low_scan_angle
 
    # Initialize variables
    speed = 0
    angle = 0
+   high_scan_angle=360
+   low_scan_angle=0
+   dots = rc.display.new_matrix()
+   #border_path = build_border_path()
 
 
    # Set initial driving speed and angle
@@ -81,7 +89,27 @@ def start():
 
    # Set update_slow to refresh every half second
    rc.set_update_slow_time(0.5) # Remove 'pass' and write your source code for the start() function here
-   dots = rc.display.new_matrix()
+
+    
+# def light_setpoint_dot(setpoint_deg):
+#     global dots
+
+#     # Clear all pixels first
+#     dots[:, :] = 0
+
+#     # Clamp angle into the display's -90..+90 range
+#     setpoint_deg = rc_utils.clamp(setpoint_deg, low_scan_angle, high_scan_angle)
+
+#     # Map -90..+90 onto an index along the 38-pixel border path (0..37)
+#     t = (setpoint_deg + 90) / 180.0          # 0.0 -> -90 deg, 1.0 -> +90 deg
+#     path_index = round(t * (len(border_path) - 1))
+#     path_index = int(rc_utils.clamp(path_index, 0, len(border_path) - 1))
+
+#     row, col = border_path[path_index]
+#     dots[row, col] = 1
+#     rc.display.set_matrix(dots)
+
+
 
 # [FUNCTION] After start() is run, this function is run once every frame (ideally at
 # 60 frames per second or slower depending on processing speed) until the back button
@@ -91,8 +119,8 @@ def update():
     global angle
     global last_error
     global max_gap
-
-    rc.drive.set_max_speed(.34)
+    global high_scan_angle
+    global low_scan_angle
 
 
     
@@ -100,37 +128,47 @@ def update():
     present_value = 0
     max=150
     prev_max=0
-    far_arrays=[]
-    far=[]
+    far_arrays=[] #array with gap arrays
+    far=[] #array with gaps
     zero_arrays=[]
     zero_indices=[]
     num=scan.__len__()
     forward_distance=rc_utils.get_lidar_average_distance(scan, 0, 10)
     current_angle=0
+    low_scan_angle=int((-90/360)*num)
+    high_scan_angle=int((90/360)*num)
     if forward_distance < forward_distance_threshold:
         if current_angle<0:
             high_scan_angle=int((160/360)*num)
         else:
             low_scan_angle=int((-160/360)*num)
-    low_scan_angle=int((-90/360)*num)
-    high_scan_angle=int((90/360)*num)
+    max_scan_range=150
+    scan_dist=[] #list of scans we can write to with 0s for distances above max range
+    for i in range (scan.__len__()):
+        if scan[i]>max_scan_range:
+            scan_dist.append(0)
+        else:
+            scan_dist.append(scan[i])
     for i in range((low_scan_angle), (high_scan_angle)):
-        if scan[i] == 0 or scan[i] > 400:
-            far.append(scan[i])
-            zero_indices.append(i)
-            if (scan[i-1]==0 and i>0) or (i<scan.__len__() and scan[i+1] == 0):
-                 far.append(scan[i])
+        if scan_dist[i] == 0:
+            if (scan_dist[i-1]==0 and i>0) or (i<scan_dist.__len__() and scan_dist[i+1] == 0):
+                 far.append(scan_dist[i])
                  zero_indices.append(i)
             elif far.__len__() > 0:
                 far_arrays.append(far)
                 far=[]
                 zero_arrays.append(zero_indices)
                 zero_indices=[]
+        elif scan_dist[i] != 0 and far.__len__() > 0:
+            far_arrays.append(far)
+            far=[]
+            zero_arrays.append(zero_indices)
+            zero_indices=[]
     for i in range(0, far_arrays.__len__()):
         if far_arrays[i].__len__() > max_gap:
             max_gap=far_arrays[i].__len__()
     if far_arrays.__len__() == 0:
-        for i in range(0, scan.__len__()):
+        for i in range(0, scan_dist.__len__()):
             if rc_utils.get_lidar_average_distance(scan, i, 5) > max:
                 max=rc_utils.get_lidar_average_distance(scan, i, 5)
                 max_angle=i
@@ -141,7 +179,7 @@ def update():
                 if far_arrays[i].__len__() > max_gap:
                     max_gap=far_arrays[i].__len__()
                     max_index=zero_arrays[i]
-                    setpoint=max_index[far.__len__()//2]
+                    setpoint=max_index[far_arrays[i].__len__()//2]
     else:
         setpoint=max_angle
         farthest_distance=setpoint
@@ -150,6 +188,10 @@ def update():
     angle=rc_utils.clamp(angle, -1, 1)
     speed=1
     last_error=error
+
+
+    # setpoint_deg = setpoint * (360.0 / num)   # LIDAR index -> degrees, works for negative indices too
+    # light_setpoint_dot(setpoint_deg) #light stuff hopefully
     
     # angle_correspond=[]
     # used_dots=dots[0,0:23], dots[0:7, 0], dots[0:7, 23]
