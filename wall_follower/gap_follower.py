@@ -54,10 +54,11 @@ rc = racecar_core.create_racecar()
 speed = 0.0
 angle = 0.0
 forward_distance = 0.0
-kD = 0.00000
-kP = 0.005  #fine???? idk
+kD = 0.000
+kP = 0.007 #fine???? idk
 last_error = 0
 dots = None
+forward_distance_threshold=175
 
 ########################################################################################
 # Functions
@@ -89,6 +90,7 @@ def update():
     global speed
     global angle
     global last_error
+    global max_gap
 
     rc.drive.set_max_speed(.34)
 
@@ -98,27 +100,48 @@ def update():
     present_value = 0
     max=150
     prev_max=0
+    far_arrays=[]
     far=[]
+    zero_arrays=[]
     zero_indices=[]
     num=scan.__len__()
+    forward_distance=rc_utils.get_lidar_average_distance(scan, 0, 10)
+    current_angle=0
+    if forward_distance < forward_distance_threshold:
+        if current_angle<0:
+            high_scan_angle=int((160/360)*num)
+        else:
+            low_scan_angle=int((-160/360)*num)
     low_scan_angle=int((-90/360)*num)
     high_scan_angle=int((90/360)*num)
     for i in range((low_scan_angle), (high_scan_angle)):
-        if scan[i] == 0:
+        if scan[i] == 0 or scan[i] > 400:
             far.append(scan[i])
             zero_indices.append(i)
-            # if (scan[i-1]==0 and i>0) or (i<scan.__len__() and scan[i+1] == 0):
-            #     far.append(scan[i])
-            #     zero_indices.append(i)
-    if far.__len__() == 0:
+            if (scan[i-1]==0 and i>0) or (i<scan.__len__() and scan[i+1] == 0):
+                 far.append(scan[i])
+                 zero_indices.append(i)
+            elif far.__len__() > 0:
+                far_arrays.append(far)
+                far=[]
+                zero_arrays.append(zero_indices)
+                zero_indices=[]
+    for i in range(0, far_arrays.__len__()):
+        if far_arrays[i].__len__() > max_gap:
+            max_gap=far_arrays[i].__len__()
+    if far_arrays.__len__() == 0:
         for i in range(0, scan.__len__()):
             if rc_utils.get_lidar_average_distance(scan, i, 5) > max:
                 max=rc_utils.get_lidar_average_distance(scan, i, 5)
                 max_angle=i
-                
-    if far.__len__() > 0:
-        setpoint=zero_indices[far.__len__()//2]
-        farthest_distance=setpoint
+    max_index=-1  
+    max_gap=-1      
+    if far_arrays.__len__() > 0:
+        for i in range(0, far_arrays.__len__()):
+                if far_arrays[i].__len__() > max_gap:
+                    max_gap=far_arrays[i].__len__()
+                    max_index=zero_arrays[i]
+                    setpoint=max_index[far.__len__()//2]
     else:
         setpoint=max_angle
         farthest_distance=setpoint
@@ -127,35 +150,36 @@ def update():
     angle=rc_utils.clamp(angle, -1, 1)
     speed=1
     last_error=error
-    angle_correspond=[]
-    used_dots=dots[0,0:23], dots[0:7, 0], dots[0:7, 23]
-    for i in range(0,7):
-         angle_correspond.append((dots[i,0],-90+(i*180/(37)), -90+180/37+(i*180/(37)))) #for first column   
-    second_angle=angle_correspond[angle_correspond.__len__()-1][angle_correspond.__len__()-1][angle_correspond.__len__()-1]
-    for i in range(0,23):
-           angle_correspond.append((dots[0,i],second_angle+(i*180/(37)), second_angle+180/37+(i*180/(37)))) #for first row
-    third_angle=angle_correspond[angle_correspond.__len__()-1][angle_correspond.__len__()-1][angle_correspond.__len__()-1]
-    for i in range(0,7):
-           angle_correspond.append((dots[i,23], third_angle+(i*180/(37)), second_angle+180/37+(i*180/(37)))) #for last column
+    
+    # angle_correspond=[]
+    # used_dots=dots[0,0:23], dots[0:7, 0], dots[0:7, 23]
+    # for i in range(0,7):
+    #      angle_correspond.append((dots[i,0],-90+(i*180/(37)), -90+180/37+(i*180/(37)))) #for first column   
+    # second_angle=angle_correspond[angle_correspond.__len__()-1][angle_correspond.__len__()-1][angle_correspond.__len__()-1]
+    # for i in range(0,23):
+    #        angle_correspond.append((dots[0,i],second_angle+(i*180/(37)), second_angle+180/37+(i*180/(37)))) #for first row
+    # third_angle=angle_correspond[angle_correspond.__len__()-1][angle_correspond.__len__()-1][angle_correspond.__len__()-1]
+    # for i in range(0,7):
+    #        angle_correspond.append((dots[i,23], third_angle+(i*180/(37)), second_angle+180/37+(i*180/(37)))) #for last column
 
-    min=float('inf')
-    diff=float('inf')
-    good_dot=None
-    for i in range(0, angle_correspond.__len__()):
-        diff=abs(angle_correspond[i][1]-setpoint)
-        if diff < min:
-            min=diff
-            good_dot=angle_correspond[i][0]
-    for i in range(0, good_dot.__len__()):
-        good_dot[i]=1
-        rc.display.set_matrix(dots)
+    # min=float('inf')
+    # diff=float('inf')
+    # good_dot=None
+    # for i in range(0, angle_correspond.__len__()):
+    #     diff=abs(angle_correspond[i][1]-setpoint)
+    #     if diff < min:
+    #         min=diff
+    #         good_dot=angle_correspond[i][0]
+    # for i in range(0, good_dot.__len__()):
+    #     good_dot[i]=1
+    #     rc.display.set_matrix(dots)
 
-    print ("speed", speed, "angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0], "error", error, "present_value", present_value)
-
+    print ("speed", speed, "angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0], "error", error, "largest gap", max_gap, "scan angles", low_scan_angle, high_scan_angle)
 
     #print("angle", angle, "setpoint", setpoint, "farthest distance", present_value, "forward distance", forward_distance)
 
     rc.drive.set_speed_angle(speed, angle)
+    current_angle=angle
     #print("angle", angle, "setpoint", setpoint, "farthest distance", max, "forward distance", scan[0])
         
 
