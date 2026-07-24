@@ -50,10 +50,11 @@ rc = racecar_core.create_racecar()
 # Declare any global variables here
 speed = 0.0
 angle = 0.0
-kD = -0.004 #-0.005
-kP = -0.02
+kD = 0#0.0001 #-0.005
+kP = 0.0027
+kP_speed = 1.2
 last_error = 0
-LOOK_AHEAD_DISTANCE = 125
+LOOK_AHEAD_DISTANCE = 200
 
 ########################################################################################
 # Functions
@@ -62,8 +63,8 @@ LOOK_AHEAD_DISTANCE = 125
 # [FUNCTION] The start function is run once every time the start button is pressed
 def gap_follow():
     scan = rc.lidar.get_samples()
-    distances = np.zeros(600)
-    angles = np.zeros(600)
+    distances = np.zeros(601)
+    angles = np.zeros(601)
     index = 0
     angle = -300
     curr_zero_gap_length = 0
@@ -74,18 +75,25 @@ def gap_follow():
     for i in range(780, 1080):
         if scan[i]<=LOOK_AHEAD_DISTANCE and scan[i]!=0:
             distances[index] = scan[i]
+        else:
+            distances[index] = 0.0
         angles[index] = angle
         index+=1
         angle+=1
     for i in range(0, 301):
         if scan[i]<=LOOK_AHEAD_DISTANCE and scan[i]!=0:
             distances[index] = scan[i]
+        else:
+            distances[index] = 0.0
         angles[index] = angle
         index+=1
         angle+=1
+        
     
-    for i in distances:
+    for i in range(0, len(distances)):
+        #print(distances[0])
         if distances[i]==0 and distances[i-1]!=0:
+            #print("hi")
             curr_zero_gap_length+=1
             start_gap = i
         elif distances[i]==0:
@@ -107,7 +115,6 @@ def gap_follow():
         middle_angle = (start_angle+end_angle)/2
     
     return middle_angle
-        
 
 
 
@@ -135,14 +142,28 @@ def start():
 def update():
     global speed
     global angle
+    global last_error
 
-    rc.drive.set_max_speed(0.34)
+    rc.drive.set_max_speed(1)
     speed = 1
+    error = gap_follow()
+    
+    if error!=-10000:
+        angle = error * kP + kD * (error - last_error)/rc.get_delta_time()
 
-    angle = gap_follow()
-    if angle!=-10000:
-        angle = angle/300
-    print("angle", angle)
+    speed = (1-abs(angle)) * kP_speed
+    """
+    speed = abs(error*kP_speed)
+    speed = rc_utils.clamp(speed, -1, 1)
+    """
+    print("angle", angle, "error", error, "speed", speed)
+
+    last_error = error
+    
+    
+    speed = rc_utils.clamp(speed, -1, 1)
+
+    angle = rc_utils.clamp(angle, -1, 1)
 
     rc.drive.set_speed_angle(speed, angle)
 
